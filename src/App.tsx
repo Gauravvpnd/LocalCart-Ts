@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 import { Wrapper, StyledButton } from './App.styles';
 import {  Badge, Drawer, Grid, LinearProgress  } from '@mui/material';
- 
-
 import Item from './Item/Item';
 import { ShoppingCart } from '@mui/icons-material';
+import Cart from './Cart/Cart';
+
 
 export type CartItemType = {
   id: number;
@@ -26,11 +26,37 @@ const App = () => {
   const { data, isLoading, error } = useQuery<CartItemType[]>('products', getProducts);
   console.log(data);
 
-  const getTotalItems = (item: CartItemType[]) => null;
+  const getTotalItems = (item: CartItemType[]) => 
+  item.reduce((ack: number,item) => ack + item.amount, 0)
 
-  const handleAddToCart = (clickedItem: CartItemType) => null;
+  const handleAddToCart = (clickedItem: CartItemType) => {
+    setCartItems(prev => {
+      const isItemInCart = prev.find(item => item.id === clickedItem.id)
 
-  const handleRemoveFromCart = () => null;
+      if(isItemInCart){
+        return prev.map(item => (
+          item.id === clickedItem.id
+          ? {...item, amount: item.amount + 1}
+          : item
+        ))
+      }
+      return[...prev, {...clickedItem, amount: 1}];
+    })
+  }
+
+  const handleRemoveFromCart = (id: number) => {
+    setCartItems((prev: CartItemType[]) => (
+      prev.reduce((ack, item) => {
+        if (item.id === id) {
+          if (item.amount === 1) return ack;
+          return [...ack, { ...item, amount: item.amount - 1 }];
+        } else {
+          return [...ack, item];
+        }
+      }, [] as CartItemType[])
+    ));
+  };  
+  
 
   if (isLoading) return <LinearProgress />;
 
@@ -39,7 +65,12 @@ const App = () => {
   return (
     <Wrapper>
       <Drawer anchor='right' open={cartOpen} onClose={() => setCartOpen(false)} >
-        Cart goes here
+      <Cart
+  cartItems={cartItems} 
+  addToCart={handleAddToCart} 
+  removeFromCart={handleRemoveFromCart} 
+/>
+
       </Drawer> 
       <StyledButton onClick={() => setCartOpen(true)}>
           <Badge badgeContent={getTotalItems(cartItems)} color='error'>
